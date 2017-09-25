@@ -1,0 +1,13 @@
+reload_signal = "SIGHUP"
+kill_signal = "SIGINT"
+log_level = "warn"
+pid_file = "/var/run/consul-template.pid"
+
+template {
+  source = "/etc/haproxy/haproxy.ctmpl"
+  destination = "/etc/haproxy/haproxy.cfg"
+  command = "systemctl reload haproxy"
+  command_timeout = "60s"
+  perms = 0600
+  }
+

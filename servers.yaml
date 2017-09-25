@@ -1,0 +1,33 @@
+---
+  :domain: example.com
+  :network: 192.168.10.0/24
+  :box: bento/centos-7.3
+  :vms:
+    - :name: chef-server
+      :ip: 192.168.10.2
+      :role: chef_server
+      :cpu: 2
+      :memory: 2048
+    - :name: consul0
+      :ip: 192.168.10.3
+      :role: consul_server_initial
+    - :name: server1
+      :ip: 192.168.10.6
+      :role: nomad_server_initial
+    - :name: server2
+      :ip: 192.168.10.7
+      :role: nomad_server
+    - :name: server3
+      :ip: 192.168.10.8
+      :role: nomad_server
+    - :name: haproxy0
+      :ip: 192.168.10.9
+      :role: haproxy
+    - :name: worker1
+      :ip: 192.168.10.10
+      :role: nomad_worker
+      :memory: 1024
+    - :name: worker2
+      :ip: 192.168.10.11
+      :role: nomad_worker
+      :memory: 1024

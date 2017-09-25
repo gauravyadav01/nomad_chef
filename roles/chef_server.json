@@ -1,0 +1,12 @@
+{
+  "name": "chef_server",
+  "chef_type": "role",
+  "json_class": "Chef::Role",
+  "description": "The base role for Chef Server",
+  "default_attributes": {
+  },
+  "run_list": [
+    "recipe[my_chef_server::default]"
+  ]
+}
+

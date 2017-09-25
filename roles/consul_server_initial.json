@@ -1,0 +1,25 @@
+{
+  "name": "consul_server_initial",
+  "description": "Consul Initial role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+    "consul": {
+      "config": {
+        "server": true,
+        "ui": true,
+        "bootstrap": true
+      }
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+    "role[base]",
+    "role[consul]"
+  ],
+  "env_run_lists": {
+
+  }
+}

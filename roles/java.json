@@ -1,0 +1,17 @@
+{
+  "name": "java",
+  "description": "java role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+  },
+  "chef_type": "role",
+  "run_list": [
+    "recipe[my_java::default]"
+  ],
+  "env_run_lists": {
+
+  }
+}

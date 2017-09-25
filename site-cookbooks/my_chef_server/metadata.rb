@@ -1,0 +1,10 @@
+name             'my_chef_server'
+maintainer       'YOUR_NAME'
+maintainer_email 'YOUR_EMAIL'
+license          'All rights reserved'
+description      'Installs/Configures my-chef-server'
+long_description 'Installs/Configures my-chef-server'
+version          '1.0.0'
+
+depends          'chef-server'
+depends          'chef-compliance'

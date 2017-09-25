@@ -1,0 +1,6 @@
+.git
+.vagrant
+Gemfile.lock
+batali.manifest
+.chef/syntax_check_cache
+cookbooks

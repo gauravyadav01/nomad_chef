@@ -1,0 +1,22 @@
+{
+  "name": "nomad_server",
+  "description": "Nomad Server role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+    "nomad": {
+      "client_enabled": false,
+      "server_enabled": true
+      }
+  },
+  "chef_type": "role",
+  "run_list": [
+    "role[base]",
+    "role[consul]",
+    "role[nomad_worker]"
+  ],
+  "env_run_lists": {
+  }
+}

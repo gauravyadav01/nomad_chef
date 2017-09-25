@@ -1,0 +1,20 @@
+{
+  "name": "base",
+  "description": "Base role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+    "base": {
+      "haproxy": true
+    }
+  },
+  "chef_type": "role",
+  "run_list": [
+    "recipe[my_base::default]"
+  ],
+  "env_run_lists": {
+
+  }
+}

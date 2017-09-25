@@ -1,0 +1,19 @@
+{
+  "name": "nomad_worker",
+  "description": "Nomad Worker role",
+  "json_class": "Chef::Role",
+  "default_attributes": {
+
+  },
+  "override_attributes": {
+  },
+  "chef_type": "role",
+  "run_list": [
+    "role[base]",
+    "role[consul]",
+    "role[java]",
+    "recipe[my_nomad]"
+  ],
+  "env_run_lists": {
+  }
+}
