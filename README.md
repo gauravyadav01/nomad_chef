@@ -4,6 +4,7 @@ This repository to help you configure your nomad development environment with Ch
 This repository is using batali to solve cookbook dependency. 
 It is using vagrant landrush plugin for DNS purpose. 
 
+
 You can add many servers you want in servers.yaml file. Nomad server is running hashi-ui for nomad GUI support. Nomad server and worker will deploy java 8.
 Haproxy is having consul-template. Consul Template will monitor consul and add or remove backend on the basis of consul service. 
 
@@ -27,12 +28,6 @@ Install below vagrant plugin.
 * vagrant-ohai ( Please download vagrant-ohai from https://github.com/gauravyadav01/vagrant-ohai/blob/master/vagrant-ohai-0.1.14.gem) 
 
 
-"Batali update" will create a cookbooks directory and fetch all dependent cookbooks in cookbook directory.
-
-```
-batali update
-```
-
 When using Landrush on OS X, Landrush will try to create a file in
 `/etc/resolver` to make the guest VM visible via DNS on the host. See *OS X* in the *Visibility on the Host* section of the link:Usage.adoc[Usage guide]. To create this file, sudo permissions are needed and Landrush
 will ask you for your sudo password. +
@@ -50,8 +45,17 @@ Cmnd_Alias VAGRANT_LANDRUSH_HOST_CHMOD = /bin/chmod 644 /etc/resolver/*
 End Landrush config
 ```
 
-Create your chef-server running below command.
 
+
+## Create your Chef server
+
+Before creating Chef server please resolve your cookbook dependecy
+
+"Batali update" will create a cookbooks directory and fetch all dependent cookbooks in cookbook directory.
+
+```
+batali update
+```
 
 ```
 vagrant up chef-server
@@ -77,6 +81,9 @@ and
 ```
 ➜ knife node list
 ```
+
+## Create other roles 
+
 
 Please run below commad to relove cookbook dependency again. It will create cookbooks directory with cookbook and vaersion as suffix.
 
@@ -129,5 +136,4 @@ knife upload .
 ```
 
 Run vagrant provision server-name  to provision the server with new changes.
-
 
