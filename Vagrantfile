@@ -41,6 +41,15 @@ rescue
   exit 1
 end
 
+msg = <<MSG
+*************************************************
+Chef-server URL : http://chef-server.example.com
+
+Username: admin
+Password: admin123
+*************************************************
+MSG
+
 required_plugins = %w( vagrant-omnibus chef landrush vagrant-cachier vagrant-ohai)
 required_plugins.each do |plugin|
     exec "vagrant plugin install #{plugin};vagrant #{ARGV.join(" ")}" unless Vagrant.has_plugin? plugin || ARGV[0] == 'plugin'
@@ -79,10 +88,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
 
     config.vm.define name.to_sym do |vm|
-      vm.vm.hostname = "#{name}.#{domain}"
-      vm.vm.box      = box
-      vm.vm.network  :private_network, ip: ip
-      vm.vm.provider :virtualbox do |vb|
+      vm.vm.hostname  = "#{name}.#{domain}"
+      vm.vm.box       = box
+      vm.vm.network   :private_network, ip: ip
+      vm.vm.provider  :virtualbox do |vb|
 	    vb.linked_clone = true
       vb.name         = name
       vb.memory       = memory
@@ -95,11 +104,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     end
       if name == 'chef-server'
         config.vm.provision :chef_solo do |chef|
-	      chef.roles_path = 'roles'
-	      chef.data_bags_path = 'data_bags'
-	      chef.add_role("role[#{role}]")
-	      chef.log_level = 'info'
-	    end
+	        chef.roles_path = 'roles'
+	        chef.data_bags_path = 'data_bags'
+	        chef.add_role("role[#{role}]")
+	        chef.log_level = 'info'
+	      end
+				config.vm.post_up_message = "#{msg}"
       else
         config.vm.provision           :chef_client do |chef|
           config.omnibus.chef_version = '13.2.20'
