@@ -22,7 +22,7 @@ gem install
 Install below vagrant plugin.
 
 * vagrant-omnibus 
-* chef landrush 
+* Vagrant landrush 
 * vagrant-cachier 
 * vagrant-ohai ( Please download vagrant-ohai from https://github.com/gauravyadav01/vagrant-ohai/blob/master/vagrant-ohai-0.1.14.gem) 
 
