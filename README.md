@@ -22,6 +22,7 @@ gem install
 
 Install below vagrant plugin.
 
+* chef
 * vagrant-omnibus 
 * Vagrant landrush 
 * vagrant-cachier 
@@ -136,4 +137,3 @@ knife upload .
 ```
 
 Run vagrant provision server-name  to provision the server with new changes.
-
