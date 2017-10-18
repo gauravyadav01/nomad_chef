@@ -8,7 +8,7 @@ default['nomad']['client']['options'] = {
   "driver.raw_exec.enable" => "1",
  }
 
-default['hashi_ui']['version'] = 'v0.20.1'
+default['hashi_ui']['version'] = 'v0.21.2'
 default['hashi_ui']['config']['nomad-address'] = "http://#{node['ipaddress']}:4646"
 default['hashi_ui']['config']['consul-enable'] = false
 default['hashi_ui']['config']['nomad-enable'] = true

@@ -4,27 +4,32 @@
 #
 # Copyright:: 2017, The Authors, All Rights Reserved.
 #
-include_recipe 'dnsmasq'
+#
+ file '/etc/NetworkManager/conf.d/10NetworkManager.conf' do
+   content "[main]\ndns=dnsmasq\n"
+   mode '0644'
+   notifies :restart, 'service[NetworkManager]', :delayed
+ end
 
-cookbook_file '/etc/dhcp/dhclient-enter-hooks' do
-  owner 'root'
-  group 'root'
-  mode '0755'
-  source 'dhclient-enter-hooks'
-  action :create
-end
+ file '/etc/resolv.dnsmasq.conf' do
+   content "nameserver 10.0.2.3"
+   mode '0644'
+   notifies :restart, 'service[NetworkManager]', :delayed
+ end
 
-execute 'create upstream dnsmasq' do
-  command '/sbin/dhclient -r eth0 && /sbin/dhclient eth0 > /etc/resolv.dnsmasq.conf'
-  creates '/etc/resolv.dnsmasq.conf'
-  notifies :restart, 'service[dnsmasq]', :immediately
-end
-
-include_recipe 'resolver'
-
-file '/etc/NetworkManager/conf.d/nodnsupdate' do
-  content "[main]\ndns=none"
-  mode '0755'
-end
+ file '/etc/resolv.conf' do
+   content "nameserver 127.0.0.1"
+   mode '0644'
+   notifies :restart, 'service[NetworkManager]', :delayed
+ end
 
 
+ cookbook_file '/etc/NetworkManager/dnsmasq.d/dnsmasq.conf' do
+   source 'dnsmasq.conf'
+   mode '0644'
+   notifies :restart, 'service[NetworkManager]', :delayed
+ end
+
+ service 'NetworkManager' do
+   action [:enable, :start]
+ end

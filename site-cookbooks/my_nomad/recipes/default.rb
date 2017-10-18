@@ -9,6 +9,8 @@ nomad = node['nomad']
 
 nomad_client_config '01-default' do
   network_interface 'eth1'
+  node_class nomad['client']['node_class'] if nomad['client']['node_class']
+  options nomad['client']['options'] if nomad['client']['options']
   notifies :restart, 'service[nomad]', :delayed
 end
 

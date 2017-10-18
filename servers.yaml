@@ -31,3 +31,7 @@
       :ip: 192.168.10.11
       :role: nomad_worker
       :memory: 1024
+    - :name: worker3
+      :ip: 192.168.10.12
+      :role: nomad_worker
+      :memory: 1024

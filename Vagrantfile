@@ -43,18 +43,12 @@ end
 
 msg = <<MSG
 *************************************************
-Chef-server URL : http://chef-server.example.com
-
-Username: admin
-Password: admin123
+* Chef-server URL : https://chef-server.example.com
+*
+* Username: admin
+* Password: admin123
 *************************************************
 MSG
-
-required_plugins = %w( vagrant-omnibus chef landrush vagrant-cachier vagrant-ohai)
-required_plugins.each do |plugin|
-    exec "vagrant plugin install #{plugin};vagrant #{ARGV.join(" ")}" unless Vagrant.has_plugin? plugin || ARGV[0] == 'plugin'
-end
-
 
 
 # Create boxes
