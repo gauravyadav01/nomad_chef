@@ -6,10 +6,16 @@ require 'optparse'
 
 options = {}
 ARGV << "-h" if ARGV.empty?
+options[:nomadhost] = '162.111.147.76'
 options[:count] = 1
-options[:artrepo] = "ebs-snapshot-repo"
+options[:arturl] = "https://artifactory.dev.cci.wellsfargo.com/artifactory"
+options[:artrepo] = "ebs-apps-snapshot"
+options[:artgroup] = "wf/ebs/emsa"
 
 optparse = OptionParser.new do |opts|
+  opts.on('--nomadhost IPADDRESS', 'Nomad IP Address, default to dev 162.111.147.76') do |h|
+    options[:nomadhost] = h
+  end
   opts.on('-d', '--datacenter DATACENTER', Array, 'Datacenter comma seperated - required') do |d|
     options[:datacenter] = d
   end
@@ -31,14 +37,14 @@ optparse = OptionParser.new do |opts|
   opts.on('--artrepo <Artifact REPO>', 'Artifact Repo, default is ebs-snapshot-repo') do |ar|
     options[:artrepo] = ar
   end
-  opts.on('--artgroup <Artifact GROUP>', 'Artifact GROUP required') do |ag|
+  opts.on('--artgroup <Artifact GROUP>', 'Artifact GROUP, default is wf/ebs/emsa') do |ag|
     options[:artgroup] = ag
   end
   opts.on('--artname <Artifact NAME>', 'Artifact Name required') do |an|
     options[:artname] = an
   end
-  opts.on('--artversion <Artifact VERSION>', 'Artifact Version required') do |av|
-    options[:artversion] = av
+  opts.on('--release <Artifact VERSION>', 'Artifact Version required') do |av|
+    options[:release] = av
   end
   opts.on_tail('-h', '--help', 'Show this message') do
     puts opts
@@ -48,7 +54,7 @@ end
 
 begin
   optparse.parse!
-  mandatory = [:datacenter, :jobname, :service, :nodeclass, :artgroup, :artversion, :artname]
+  mandatory = [:datacenter, :jobname, :service, :release, :artname]
   missing = mandatory.select{ |param| options[param].nil? }
   unless missing.empty?
     raise OptionParser::MissingArgument.new(missing.join(', '))
@@ -61,14 +67,13 @@ end
 
 options[:tags] = options[:service] if options[:tags].to_s.empty?
 
-client = Gadabout::Client.new(host='192.168.10.5')
+client = Gadabout::Client.new(host="#{options[:nomadhost]}")
 
 var = job do
   id options[:jobname]
   name options[:jobname]
   region "global"
   type "service"
-  #datacenters "#{options[:datacenter][0]}", "#{options[:datacenter][1]}"
   datacenters options[:datacenter]
 
   task_group do
@@ -76,23 +81,25 @@ var = job do
     count options[:count]
     task do
       name options[:jobname]
-      constraint do
-        l_target "${node.class}"
-        operand "="
-        r_target options[:nodeclass]
+      if options[:nodeclass]
+        constraint do
+          l_target "${node.class}"
+          operand "="
+          r_target options[:nodeclass]
+        end
       end
       artifact do
-        source "https://artifactory.dev.cci.wellsfargo.com/artifactory/#{options[:artrepo]}/#{options[:artgroup]}/#{options[:artname]}/#{options[:artversion]}/#{options[:artname]}-#{options[:artversion]}-jdk8.jar"
+        source "#{options[:arturl]}/#{options[:artrepo]}/#{options[:artgroup]}/#{options[:artname]}/#{options[:release]}/#{options[:artname]}-#{options[:release]}-jdk8.jar"
       end
 
       driver "java"
-      config "jar_path", "local/#{options[:artname]}-#{options[:artversion]}-jdk8.jar"
+      config "jar_path", "local/#{options[:artname]}-#{options[:release]}-jdk8.jar"
       config "args", [
-        "-f"
+        "--server.port=${NOMAD_PORT_http}",
+        "--spring.profiles.active=desktop"
       ]
       services do
         name options[:service][0]
-#        tags "#{options[:tags][0]}", "#{options[:tags][1]}", "#{options[:tags][2]}", "#{options[:tags][3]}", "#{options[:tags][4]}"
         tags options[:tags]
         port_label "http"
         checks do
@@ -104,15 +111,18 @@ var = job do
       end
       resources do
         network do |n|
-          reserved_port "http", 80
+          dynamic_port "http"
         end
-
+        memory 2000
+        cpu 1000
       end
     end
   end
 end
 
-payload = var.instance_variable_get :@output
-
-puts payload
-#client.register_job(payload)
+puts "Formatting nomad job in json\n"
+payload = var.output
+puts var.output
+puts "\n"
+puts "Submitting job"
+client.register_job(payload)
