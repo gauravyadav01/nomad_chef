@@ -3,6 +3,8 @@
 
 require 'gadabout'
 require 'optparse'
+require 'json'
+require 'pp'
 
 options = {}
 ARGV << "-h" if ARGV.empty?
@@ -12,6 +14,8 @@ options[:arturl] = "https://artifactory.dev.cci.wellsfargo.com/artifactory"
 options[:artrepo] = "ebs-apps-snapshot"
 options[:artgroup] = "wf/ebs/emsa"
 options[:release] = "[RELEASE]"
+options[:tags] = []
+
 optparse = OptionParser.new do |opts|
   opts.on('--nomadhost IPADDRESS', 'Nomad IP Address, default to dev 162.111.147.76') do |h|
     options[:nomadhost] = h
@@ -46,6 +50,9 @@ optparse = OptionParser.new do |opts|
   opts.on('--release <Artifact VERSION>', 'Artifact Version required') do |av|
     options[:release] = av
   end
+  opts.on('--args <Jobs Arguments>', Array, 'Args required') do |arg|
+    options[:args] = arg
+  end
   opts.on_tail('-h', '--help', 'Show this message') do
     puts opts
     exit
@@ -54,7 +61,7 @@ end
 
 begin
   optparse.parse!
-  mandatory = [:datacenter, :jobname, :service, :release, :artname]
+  mandatory = [:datacenter, :release, :artname]
   missing = mandatory.select{ |param| options[param].nil? }
   unless missing.empty?
     raise OptionParser::MissingArgument.new(missing.join(', '))
@@ -65,7 +72,9 @@ rescue OptionParser::InvalidOption, OptionParser::MissingArgument
   exit
 end
 
-options[:tags] = options[:service] if options[:tags].to_s.empty?
+options[:service] = options[:artname] if options[:service].to_s.empty?
+options[:tags] << options[:service]
+options[:jobname] = "#{options[:artname]}" + "-" + "#{options[:datacenter][0]}" if options[:jobname].to_s.empty?
 
 client = Gadabout::Client.new(host="#{options[:nomadhost]}")
 
@@ -94,12 +103,10 @@ var = job do
 
       driver "java"
       config "jar_path", "local/#{options[:artname]}-#{options[:release]}-jdk8.jar"
-      config "args", [
-        "--server.port=${NOMAD_PORT_http}",
-        "--spring.profiles.active=desktop"
-      ]
+      config "args", options[:args]
+
       services do
-        name options[:service][0]
+        name options[:service]
         tags options[:tags]
         port_label "http"
         checks do
@@ -125,4 +132,9 @@ payload = var.output
 puts var.output
 puts "\n"
 puts "Submitting job"
-client.register_job(payload)
+#client.register_job(payload)
+puts "Submitted job"
+
+allocations = client.job_allocations('id-verification')
+printf("%40s, %40s, %40s, %40s\n", "allocation-id", "EvalID", "Name", "NodeID")
+allocations.each { |a| printf("%40s, %40s, %40s, %40s\n", a['ID'],a['EvalID'],a['Name'],a['NodeID']) }
