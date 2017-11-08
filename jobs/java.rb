@@ -11,7 +11,7 @@ options[:count] = 1
 options[:arturl] = "https://artifactory.dev.cci.wellsfargo.com/artifactory"
 options[:artrepo] = "ebs-apps-snapshot"
 options[:artgroup] = "wf/ebs/emsa"
-
+options[:release] = "[RELEASE]"
 optparse = OptionParser.new do |opts|
   opts.on('--nomadhost IPADDRESS', 'Nomad IP Address, default to dev 162.111.147.76') do |h|
     options[:nomadhost] = h
