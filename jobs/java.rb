@@ -3,10 +3,13 @@
 #  This script helps in placing nomad jobs, Check allocation and Helath check,
 #  Please check help
 #  Author: Gaurav Yadav
-#  v 0.5
+#  v 0.7
 #  ./nomad_java.rb -h
 #
 #  0.3 - Nov 15, 2017, Added --dry options help you to just see nomad json, added --server.port=${NOMAD_PORT_http} default argument for nomad jobs
+#  0.6 - Nov 27, 2017, Added --snapshot-version, -e , snapshot-version and enviornment has been added.
+#  0.7 - Nov 27, 2017, Changed /healthCheck to /health
+#  0.8 - Nov 27, 2017, Added Nodeclass as subenv
 #
 #
 #*****************************************************************************************************
@@ -20,8 +23,10 @@ require 'pp'
 options = {}
 ARGV << "-h" if ARGV.empty?
 new_allocations = []
+events = []
 do_break = false
-options[:nomadhost] = '162.111.147.76'
+artificaturl = ""
+jarpath = ""
 options[:count] = 1
 options[:arturl] = "https://artifactory.dev.cci.wellsfargo.com/artifactory"
 options[:artrepo] = "ebs-apps-snapshot"
@@ -29,10 +34,28 @@ options[:artgroup] = "wf/ebs"
 options[:release] = "[RELEASE]"
 options[:tags] = []
 options[:args] = ['--server.port=${NOMAD_PORT_http}']
+options[:env] = "dev"
+
+options[:host] = {
+  :dev => '162.111.147.76',
+  :test => '22.52.33.144',
+  :prod => '22.45.34.244'
+}
+options[:user] = {
+  :dev => 'nobody',
+  :test => 'ecctest',
+  :prod => 'ecccom'
+}
 
 optparse = OptionParser.new do |opts|
   opts.on('--nomadhost IPADDRESS', 'Nomad IP Address, default to dev 162.111.147.76') do |h|
     options[:nomadhost] = h
+  end
+  opts.on('-e', '--env ENV', 'Environment dev, test, prod') do |e|
+    options[:env] = e
+  end
+  opts.on('--subenv SUBENV', 'Environment test,uat,perf,prodimage') do |se|
+    options[:subenv] = se
   end
   opts.on('-d', '--datacenter DATACENTER', Array, 'Datacenter comma seperated - required') do |d|
     options[:datacenter] = d
@@ -64,8 +87,14 @@ optparse = OptionParser.new do |opts|
   opts.on('--release <Artifact VERSION>', 'Artifact Version, default: artname ') do |av|
     options[:release] = av
   end
+  opts.on('--snapshot-version <snapshot VERSION>', 'Snapshot Version 1.0-20171117.171432-1 ') do |sv|
+    options[:snapshot] = sv
+  end
   opts.on('--args <Jobs Arguments>', Array, "Args can be passwd in 'arg1','arg2','arg3' in single quotes seperated by qoma" ) do |arg|
     options[:args] << arg
+  end
+  opts.on('-u', '--nomad-user <Nomad User>', "Nomad User, dev: nobody, test: ecctest, prod: ecccom,  default will be nobody" ) do |u|
+    options[:nomaduser] = u
   end
   opts.on('--dry', "Dry run will not schedule any jobs , Will give you print the job in JSON" ) do |dry|
     options[:dry] = true
@@ -90,8 +119,53 @@ rescue OptionParser::InvalidOption, OptionParser::MissingArgument
 end
 
 options[:service] = options[:artname] if options[:service].to_s.empty?
+if options[:subenv]
+  options[:service] = options[:service] + "-#{options[:subenv]}"
+end
 options[:tags] << options[:service]
 options[:jobname] = "#{options[:artname]}" + "-" + "#{options[:datacenter][0]}" if options[:jobname].to_s.empty?
+if options[:subenv]
+  options[:jobname] = options[:jobname] + "-#{options[:subenv]}"
+end
+
+
+if options[:release]
+  artifacturl = "#{options[:arturl]}/#{options[:artrepo]}/#{options[:artgroup]}/#{options[:artname]}/#{options[:release]}/#{options[:artname]}-#{options[:release]}-jdk8.jar"
+  jarpath = "local/#{options[:artname]}-#{options[:release]}-jdk8.jar"
+end
+if options[:snapshot]
+  a = options[:snapshot].split('-')
+  options[:release] = a[0]
+  artifacturl = "#{options[:arturl]}/#{options[:artrepo]}/#{options[:artgroup]}/#{options[:artname]}/#{options[:release]}-SNAPSHOT/#{options[:artname]}-#{options[:snapshot]}-jdk8.jar"
+  jarpath = "local/#{options[:artname]}-#{options[:snapshot]}-jdk8.jar"
+end
+
+
+if options[:nomadhost].to_s.empty?
+  if options[:env] == 'test'
+    options[:nomadhost] = options[:host][:test]
+  elsif options[:env] == "prod"
+    options[:nomadhost] = options[:host][:prod]
+  else
+    options[:nomadhost] = options[:host][:dev]
+  end
+end
+if options[:nomaduser].to_s.empty?
+  if options[:env] == 'test'
+    options[:nomaduser] = options[:user][:test]
+  elsif options[:env] == "prod"
+    options[:nomaduser] = options[:user][:prod]
+  else
+    options[:nomaduser] = options[:user][:dev]
+  end
+end
+
+if options[:env] == 'test' || options[:env] == 'prod'
+  if !options[:nodeclass]
+    options[:nodeclass] = options[:subenv]
+  end
+end
+
 
 client = Gadabout::Client.new(:host => options[:nomadhost])
 
@@ -111,6 +185,7 @@ var = job do
     count options[:count]
     task do
       name options[:jobname]
+      user options[:nomaduser]
       if options[:nodeclass]
         constraint do
           l_target "${node.class}"
@@ -119,11 +194,12 @@ var = job do
         end
       end
       artifact do
-        source "#{options[:arturl]}/#{options[:artrepo]}/#{options[:artgroup]}/#{options[:artname]}/#{options[:release]}/#{options[:artname]}-#{options[:release]}-jdk8.jar"
+        source "#{artifacturl}"
       end
 
       driver "java"
-      config "jar_path", "local/#{options[:artname]}-#{options[:release]}-jdk8.jar"
+      #config "jar_path", "local/#{options[:artname]}-#{options[:release]}-jdk8.jar"
+      config "jar_path", "#{jarpath}"
       if options[:args]
       config "args", options[:args].flatten
       end
@@ -192,37 +268,53 @@ end
 
 allocations = client.job_allocations(options[:jobname])
 puts "Wait for all allocation to be placed"
+#while true do
+#  allocations.each do |a|
+#    if a['JobVersion'] == new_version && a['ClientStatus'] == 'running'
+#      new_allocations << a['ID'] unless new_allocations.include?(a['ID'])
+#    end
+#    if new_allocations.length == options[:count]
+#      do_break = true
+#    end
+#  end
+#   sleep 10
+#   allocations = client.job_allocations(options[:jobname])
+#   #print "."
+#   print
+#   break if do_break
+#end
+
+#puts "\n\n"
+#puts "Allocations are:"
+#new_allocations.each_with_index do |v,i|
+#  i = i +1
+#  puts "#{i}. #{v}"
+#end
+#puts "\n"
+#sleep 40
+#puts "Checking Service Health Check"
+#printf("%40s, %20s, %6s, %20s\n", 'Allocation', 'IP', 'PORT', 'HealthCheck')
+#new_allocations.each do |na|
+#  a = client.allocation(na)
+#  ip = a['Resources']['Networks'][0]['IP']
+#  port = a['Resources']['Networks'][0]['DynamicPorts'][0]['Value']
+#  uri = URI("http://#{ip}:#{port}/health")
+#  output = Net::HTTP.get(uri)
+#  printf("%40s, %20s, %6s, %20s\n",  na, ip, port, output)
+#end
+#
 while true do
   allocations.each do |a|
-    if a['JobVersion'] == new_version && a['ClientStatus'] == 'running'
-      new_allocations << a['ID'] unless new_allocations.include?(a['ID'])
-    end
-    if new_allocations.length == options[:count]
-      do_break = true
+    if a['JobVersion'] == new_version
+      while a['ClientStatus'] != 'running'
+        a['TaskStates'][options[:jobname]]['Events'].each do |e|
+          events << e['Type'] unless events.include?(e['Type'])
+          puts events
+        end
+      end
     end
   end
-   sleep 10
-   allocations = client.job_allocations(options[:jobname])
-   print "."
-   break if do_break
 end
 
-puts "\n\n"
-puts "Allocations are:"
-new_allocations.each_with_index do |v,i|
-  i = i +1
-  puts "#{i}. #{v}"
-end
-puts "\n"
-sleep 40
-puts "Checking Service Health Check"
-printf("%40s, %20s, %6s, %20s\n", 'Allocation', 'IP', 'PORT', 'HealthCheck')
-new_allocations.each do |na|
-  a = client.allocation(na)
-  ip = a['Resources']['Networks'][0]['IP']
-  port = a['Resources']['Networks'][0]['DynamicPorts'][0]['Value']
-  uri = URI("http://#{ip}:#{port}/healthCheck")
-  output = Net::HTTP.get(uri)
-  printf("%40s, %20s, %6s, %20s\n",  na, ip, port, output)
-end
+
 end
